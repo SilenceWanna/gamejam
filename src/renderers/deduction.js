@@ -56,6 +56,9 @@ export function renderDeduction(scene) {
   const fixedIds = new Set(Object.values(fixedSlots));
   const clues = allClues.filter((clue) => !fixedIds.has(clue.id));
   const previous = state.deductions[scene.deductionId];
+  const failureLockUntil = Number(previous?.failureLockUntil ?? 0);
+  const failureLocked = failureLockUntil > Date.now();
+  const usePreviousAssignments = !previous?.failureLockUntil || failureLocked;
   const introProgress = getDeductionIntroProgress(
     state.deductionIntros?.[scene.deductionId],
     previous,
@@ -63,7 +66,7 @@ export function renderDeduction(scene) {
   const assignments = Array.from({ length: scene.requiredCount }, (_, index) => {
     const fixedId = fixedSlots[index];
     if (fixedId && availableIds.has(fixedId)) return fixedId;
-    const id = previous?.lastClueIds?.[index];
+    const id = usePreviousAssignments ? previous?.lastClueIds?.[index] : null;
     return availableIds.has(id) ? id : null;
   });
   let selectedId = null;
@@ -154,7 +157,8 @@ export function renderDeduction(scene) {
   );
   content.append(instructions);
   const panel = element('section', 'deduction-panel');
-  panel.inert = presentingInstructions;
+  panel.inert = presentingInstructions || failureLocked;
+  panel.classList.toggle('is-failure-locked', failureLocked);
   const form = element('form', 'deduction-form');
   const expression = element('div', 'deduction-expression');
   expression.setAttribute('role', 'group');
@@ -162,13 +166,15 @@ export function renderDeduction(scene) {
   expression.dataset.slots = String(scene.requiredCount);
   const feedback = element('p', 'form-feedback');
   feedback.setAttribute('role', 'status');
-  if (previous?.attempts && previous.lastReason) feedback.textContent = feedbackText(previous.lastReason);
+  if (previous?.attempts && previous.lastReason && (!previous.failureLockUntil || failureLocked)) {
+    feedback.textContent = feedbackText(previous.lastReason);
+  }
   const shelf = element('section', 'deduction-shelf');
   shelf.setAttribute('aria-label', '所有已收集的线索');
   const cards = element('div', 'deduction-card-grid');
 
   function putClue(id, index) {
-    if (!availableIds.has(id) || fixedSlots[index]) return;
+    if (failureLocked || !availableIds.has(id) || fixedSlots[index]) return;
     const origin = assignments.indexOf(id);
     const displaced = assignments[index];
     // 一条线索只能占一个格子；从另一格拖入时交换位置。
@@ -179,8 +185,9 @@ export function renderDeduction(scene) {
     paint();
   }
 
-  function makeDraggable(node, id) {
-    node.draggable = true;
+  function makeDraggable(node, id, enabled = true) {
+    node.draggable = enabled;
+    if (!enabled) return;
     node.addEventListener('dragstart', (event) => {
       draggedId = id;
       event.dataTransfer.effectAllowed = 'move';
@@ -207,8 +214,9 @@ export function renderDeduction(scene) {
       const slot = element('div', 'deduction-slot');
       const isFixed = Boolean(fixedSlots[index] && fixedSlots[index] === id);
       slot.dataset.slotIndex = String(index);
-      slot.tabIndex = isFixed ? -1 : 0;
+      slot.tabIndex = isFixed || failureLocked ? -1 : 0;
       slot.setAttribute('role', 'group');
+      slot.setAttribute('aria-disabled', String(failureLocked));
       slot.setAttribute('aria-label', `表达式空格 ${index + 1}${clue ? `：${clue.title}${isFixed ? '，固定线索' : ''}` : '：拖入线索'}`);
       if (clue) {
         slot.classList.add('is-filled');
@@ -219,12 +227,14 @@ export function renderDeduction(scene) {
           card.draggable = false;
           slot.append(card, element('span', 'deduction-slot-fixed', '固定'));
         } else {
-          makeDraggable(card, id);
+          makeDraggable(card, id, !failureLocked);
           const remove = createButton('×', 'deduction-slot-remove', (event) => {
+            if (failureLocked) return;
             event.stopPropagation();
             assignments[index] = null;
             paint();
           });
+          remove.disabled = failureLocked;
           remove.setAttribute('aria-label', `移除${clue.title}`);
           slot.append(card, remove);
         }
@@ -236,6 +246,7 @@ export function renderDeduction(scene) {
         return;
       }
       const selectSlot = () => {
+        if (failureLocked) return;
         if (selectedId) putClue(selectedId, index);
         else if (id) { selectedId = id; paint(); }
       };
@@ -246,6 +257,7 @@ export function renderDeduction(scene) {
         selectSlot();
       });
       slot.addEventListener('dragover', (event) => {
+        if (failureLocked) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         slot.classList.add('is-drop-target');
@@ -254,6 +266,7 @@ export function renderDeduction(scene) {
         if (!slot.contains(event.relatedTarget)) slot.classList.remove('is-drop-target');
       });
       slot.addEventListener('drop', (event) => {
+        if (failureLocked) return;
         event.preventDefault();
         const dropped = event.dataTransfer.getData('text/plain') || draggedId;
         slot.classList.remove('is-drop-target');
@@ -263,7 +276,10 @@ export function renderDeduction(scene) {
     });
     if (scene.resultSlot) {
       expression.append(element('span', 'deduction-operator', '='));
-      const resultClue = getClue(previous?.lastProducedClueId);
+      const displayedProducedClueId = previous?.failureLockUntil && !failureLocked
+        ? null
+        : previous?.lastProducedClueId;
+      const resultClue = getClue(displayedProducedClueId);
       const resultSlot = element('div', `deduction-slot deduction-result-slot${resultClue ? ' is-filled' : ''}`);
       if (resultClue) {
         const resultCard = element('div', `deduction-slot-card${resultClue.id === 'clue_station_woman_birth_mother' ? ' is-final-result' : ''}`);
@@ -278,11 +294,14 @@ export function renderDeduction(scene) {
     cards.replaceChildren();
     clues.forEach((clue, index) => {
       const card = createButton('', 'clue-card deduction-card', () => {
+        if (failureLocked) return;
         selectedId = clue.id;
         paint();
         if (clue.image) openClueDialog(clue);
       });
       card.dataset.clueId = clue.id;
+      card.disabled = failureLocked;
+      card.setAttribute('aria-disabled', String(failureLocked));
       card.classList.toggle('is-selected', selectedId === clue.id);
       card.classList.toggle('is-assigned', assignments.includes(clue.id));
       card.setAttribute('aria-pressed', String(selectedId === clue.id));
@@ -296,7 +315,7 @@ export function renderDeduction(scene) {
       card.style.setProperty('--clue-y-compact', `${placement.compactY ?? placement.y}%`);
       card.style.setProperty('--clue-rotation', `${placement.rotation}deg`);
       card.append(createClueVisual(clue));
-      makeDraggable(card, clue.id);
+      makeDraggable(card, clue.id, !failureLocked);
       cards.append(card);
     });
     if (!clues.length) cards.append(element('p', 'deduction-empty', '当前还没有已收集的线索。'));
@@ -304,8 +323,10 @@ export function renderDeduction(scene) {
 
   const submit = element('button', 'primary-button deduction-submit', '提交');
   submit.type = 'submit';
+  submit.disabled = presentingInstructions || failureLocked;
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (failureLocked) return;
     if (assignments.some((id) => !id)) {
       feedback.textContent = feedbackText('INCOMPLETE_EXPRESSION');
       return;
@@ -321,6 +342,17 @@ export function renderDeduction(scene) {
   content.append(panel);
   paint();
   const page = createPage(scene, content, { immersive: true });
+  let failureTimer = null;
+  if (previous?.failureLockUntil) {
+    const delay = Math.max(0, failureLockUntil - Date.now());
+    failureTimer = window.setTimeout(() => {
+      failureTimer = null;
+      dispatch({
+        type: ACTION_TYPES.CLEAR_DEDUCTION_FAILURE,
+        deductionId: scene.deductionId,
+      });
+    }, delay);
+  }
   const introController = new AbortController();
   let introAnimation = null;
   let introFrameId = null;
@@ -397,6 +429,7 @@ export function renderDeduction(scene) {
     introController.abort();
     cancelAnimationFrame(introFrameId);
     introAnimation?.cancel();
+    if (failureTimer !== null) window.clearTimeout(failureTimer);
     if (finalizeTimer !== null) window.clearTimeout(finalizeTimer);
   };
   return page;

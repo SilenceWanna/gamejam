@@ -23,6 +23,7 @@ export const ACTION_TYPES = Object.freeze({
   MINIGAME_ACTION: 'MINIGAME_ACTION',
   LOSE_PATIENCE: 'LOSE_PATIENCE',
   SUBMIT_DEDUCTION: 'SUBMIT_DEDUCTION',
+  CLEAR_DEDUCTION_FAILURE: 'CLEAR_DEDUCTION_FAILURE',
   FINALIZE_DEDUCTION_STEP: 'FINALIZE_DEDUCTION_STEP',
   DEDUCTION_INTRO_ACTION: 'DEDUCTION_INTRO_ACTION',
   ADVANCE_DEDUCTION_OUTRO: 'ADVANCE_DEDUCTION_OUTRO',
@@ -452,6 +453,7 @@ function submitDeduction(action) {
           lastClueIds: clueIds,
           lastReason: null,
           lastProducedClueId: result.producedClueId,
+          failureLockUntil: null,
           pendingStep: {
             producedClueId: result.producedClueId,
             consumedClueIds: result.consumedClueIds,
@@ -473,6 +475,7 @@ function submitDeduction(action) {
         lastClueIds: clueIds,
         lastReason: result.reason,
         lastProducedClueId: result.producedClueId ?? null,
+        failureLockUntil: result.correct ? null : Date.now() + 1000,
         outroIndex: result.correct && scene.outroLines?.length ? 0 : previous.outroIndex ?? 0,
       },
     },
@@ -498,6 +501,33 @@ function submitDeduction(action) {
 
   const navigation = result.next ? navigate(result.next) : null;
   return { ...result, navigation };
+}
+
+/**
+ * 清理错误推理的短暂锁定，恢复空白表达式并移除错误提示。
+ * 该 action 由推理页面在锁定时间结束后触发。
+ */
+function clearDeductionFailure(action) {
+  const state = getState();
+  const scene = SCENES[state.sceneId];
+  const previous = state.deductions[action.deductionId];
+  if (!scene || scene.kind !== 'deduction' || scene.deductionId !== action.deductionId || !previous) {
+    return { ok: false, reason: 'NOT_IN_DEDUCTION' };
+  }
+
+  setState({
+    deductions: {
+      ...state.deductions,
+      [action.deductionId]: {
+        ...previous,
+        lastClueIds: [],
+        lastReason: null,
+        lastProducedClueId: null,
+        failureLockUntil: null,
+      },
+    },
+  });
+  return { ok: true, reason: null };
 }
 
 function finalizeDeductionStep(action) {
@@ -600,6 +630,8 @@ export function dispatch(action) {
       return losePatience();
     case ACTION_TYPES.SUBMIT_DEDUCTION:
       return submitDeduction(action);
+    case ACTION_TYPES.CLEAR_DEDUCTION_FAILURE:
+      return clearDeductionFailure(action);
     case ACTION_TYPES.FINALIZE_DEDUCTION_STEP:
       return finalizeDeductionStep(action);
     case ACTION_TYPES.DEDUCTION_INTRO_ACTION:

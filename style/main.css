@@ -1524,6 +1524,12 @@ input:focus-visible + .option-marker {
   pointer-events: none;
 }
 
+.deduction-panel.is-failure-locked .deduction-expression,
+.deduction-panel.is-failure-locked .deduction-actions,
+.deduction-panel.is-failure-locked .deduction-card {
+  pointer-events: none;
+}
+
 .deduction-back.immersive-menu-button {
   right: auto;
   left: 22px;
@@ -1773,7 +1779,9 @@ input:focus-visible + .option-marker {
 .deduction-form > .form-feedback {
   position: absolute;
   z-index: 6;
-  top: 51.5%;
+  /* Keep failure feedback below the submit control instead of sharing its
+     vertical band on shorter deduction boards. */
+  top: calc(48.5% + 56px);
   left: 46.5%;
   min-height: 22px;
   margin: 0;
@@ -3408,13 +3416,4 @@ input:focus-visible + .option-marker {
   .ui-paper-tag::after {
     transition: none;
   }
-}
-
-/* Development controls remain implemented, but are temporarily unavailable in the UI. */
-.title-debug-tools,
-[data-dev-control='animation-skip'],
-[data-dev-control='minigame-skip'] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
 }
