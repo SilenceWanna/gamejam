@@ -1,0 +1,14 @@
+# The repository contains only the playable game files and its local preview server.
+# Everything else in the workspace (tests, documentation, temporary artifacts,
+# generated archives, and editor/runtime metadata) stays out of version control.
+*
+!.gitignore
+!assets/
+!assets/**
+!src/
+!src/**
+!style/
+!style/**
+!index.html
+!star-letter.mock.mjs
+!serve_game.py

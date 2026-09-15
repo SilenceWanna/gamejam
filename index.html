@@ -1,16 +1,24 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sandbox</title>
-  <link rel="stylesheet" href="style/main.css" />
-  <!-- 平台 Game SDK（nosdn 白名单内）；经典脚本先于 module 执行 -->
+  <meta name="theme-color" content="#263541" />
+  <title>归途 | MIA PRIVATE INQUIRY OFFICE</title>
+  <link rel="icon" href="data:," />
+  <link rel="preload" as="image" href="assets/images/background/office/MIA-SYS-BG-OfficeTalk_ClientBG_Day_v01.png" />
+  <link rel="preload" as="image" href="assets/images/background/office/MIA-SYS-BG-OfficeTalk_MiaBG_Day_v01.png" />
+  <link rel="preload" as="image" href="assets/images/background/office/MIA-SYS-BG-OfficeExterior_AfterRain_v01.png" />
+  <link rel="preload" as="image" href="assets/images/background/office/MIA-SYS-BG-OfficeReasoningDesk_Day_v01.png" />
+  <link rel="preload" as="image" href="assets/images/background/office/MIA-SYS-BG-OfficeReasoningDesk_Day_v02.png" />
+  <link rel="preload" as="image" href="assets/images/background/MIA-C01-P1-INV-01_AyaoRoom.png" />
+  <link rel="preload" as="image" href="assets/images/characters/P1-CHAR-MIA-OFFICE_TALK-BUST-001.png" />
+  <link rel="preload" as="image" href="assets/images/characters/P1-CHAR-AYAO-OFFICE_TALK-BUST-001.png" />
+  <link rel="stylesheet" href="style/main.css?v=20260915-script-v2-2-all-dialogue-white-1-immersive-result-2-visual-crossfade-1-dialogue-fade-sync-1-minigame-office-cover-1-settings-no-header-1-ending-screen-1-ending-kicker-2-title-cover-1-matching-jianzi-1-cylindrical-jianzi-base-1-exact-jianzi-reference-1-unified-ui-1-title-spacing-1-dialog-vertical-2-title-dialog-close-1-dev-controls-hidden-1" />
+  <!-- 平台 SDK 加载失败时，游戏会自动使用本地预览模式。 -->
   <script src="https://gz-vchar-pub.nosdn.127.net/star-letter/game-sdk/v2/sdk.iife.js"></script>
 </head>
 <body>
-  <!-- 游戏挂载点：界面全部由 src/engine.js 按 src/scenes.js 的场景表渲染 -->
-  <main id="app"></main>
-  <script type="module" src="src/main.js"></script>
+  <main id="app" aria-live="polite"></main>
+  <script type="module" src="src/main.js?v=20260915-script-v2-3-dialogue-trim-1-dialogue-split-1-minigame-narration-1-prologue-exterior-1-phase-dialogue-2-mia-line-1-he-narration-1-be-narration-1-act2-accent-1-phase-address-1-immersive-result-2-office-rain-1-visual-crossfade-1-be-location-1-dialogue-delay-1-deduction-portrait-wait-1-dialogue-fade-sync-1-prologue-tram-portrait-1-dialogue-conditional-1-deduction-hold-2s-1-deduction-office-rain-1-hold-landing-1-office-indoor-amb-1-office-roomtone-layer-1-writing-sfx-1-act1-audio-1-act2-amb-1-quiet-hero-1-audio-layout-1-be-audio-1-writing-level-1-investigation-village-amb-1-minigame-office-intro-1-quiet-followup-hero-1-minigame-office-cover-1-ending-codex-label-1-ending-screen-1-ending-only-1-seamless-loops-1-ending-kicker-2-ending-frame-seamless-1-title-cover-1-settings-hidden-menu-1-first-two-minigame-no-white-1-act3-audio-1-he-audio-1-act2-group-audio-1-act3-audio-mix-1-unified-ui-1-menu-label-1-dialog-vertical-1"></script>
 </body>
 </html>
